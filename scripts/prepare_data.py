@@ -135,7 +135,7 @@ def process_sharegpt4v_row(row) -> Dict:
     }
     """
     conversations = row["conversations"]
-    image = f'FreedomIntelligence/ALLaVA-4V/{row["image"]}'
+    image = f'/scratch/yh5961/RLSD/SpecForge/ShareGPT4V/data/{row["image"]}'
     if not os.path.exists(image):
         print(f"Image path {image} does not exist, skipping this sample.")
         return None, None
@@ -230,7 +230,7 @@ def main():
             ds = load_dataset_from_path(Path(args.data_path))
         proc_fn = process_sharegpt_row
     elif args.dataset == "sharegpt4v":
-        ds = load_dataset("Lin-Chen/ShareGPT4V")["train"]
+        ds = load_dataset("Lin-Chen/ShareGPT4V", "ShareGPT4V")["train"]
         proc_fn = process_sharegpt4v_row
     elif args.dataset == "allava4v":
         ds = load_dataset("FreedomIntelligence/ALLaVA-4V", name="allava_laion")[

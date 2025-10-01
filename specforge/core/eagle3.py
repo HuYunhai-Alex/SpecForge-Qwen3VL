@@ -657,7 +657,6 @@ class QwenVLOnlineEagle3Model(Eagle3Model):
                 input_ids,
                 image_grid_thw,
                 None,
-                second_per_grid_ts=None,
                 attention_mask=attention_mask_tensor,
             )
             self.rope_deltas = rope_deltas

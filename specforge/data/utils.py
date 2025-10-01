@@ -184,12 +184,16 @@ class VlmDataCollatorWithPadding:
         batch_loss_mask = torch.cat(
             [self.paddingtensor2D(item["loss_mask"], max_length) for item in features]
         )
-        batch_pixel_values = torch.cat(
-            [item["pixel_values"] for item in features], dim=0
-        )
-        batch_image_grid_thw = torch.cat(
-            [item["image_grid_thw"] for item in features], dim=0
-        )
+        if all("pixel_values" in item for item in features):
+            batch_pixel_values = torch.cat(
+                [item["pixel_values"] for item in features], dim=0
+            )
+            batch_image_grid_thw = torch.cat(
+                [item["image_grid_thw"] for item in features], dim=0
+            )
+        else:
+            batch_pixel_values = None
+            batch_image_grid_thw = None
         batch = {
             "input_ids": batch_input_ids,
             "attention_mask": batch_attention_mask,

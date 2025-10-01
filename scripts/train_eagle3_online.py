@@ -12,7 +12,7 @@ from datasets import load_dataset
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import MixedPrecision, ShardingStrategy, StateDictType
 from tqdm import tqdm
-from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoTokenizer
+from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor, AutoImageProcessor, AutoTokenizer
 
 from specforge import (
     AutoDistributedTargetModel,
@@ -21,6 +21,10 @@ from specforge import (
     OnlineEagle3Model,
     QwenVLOnlineEagle3Model,
 )
+from specforge.qwen3vl.configuration_qwen3_vl import Qwen3VLConfig 
+from specforge.qwen3vl.modeling_qwen3_vl import Qwen3VLForConditionalGeneration
+from specforge.qwen3vl.processing_qwen3_vl import Qwen3VLProcessor
+
 from specforge.data import (
     build_eagle3_dataset,
     generate_vocab_mapping_file,
@@ -130,7 +134,7 @@ def parse_args():
     parser.add_argument(
         "--report-to",
         type=str,
-        default="none",
+        default="wandb",
         choices=["wandb", "tensorboard", "swanlab", "mlflow", "none"],
         help="The integration to report results and logs to.",
     )
@@ -262,17 +266,28 @@ def main():
                 device_mesh=get_tp_device_mesh(),
             ).eval()
     else:
-        if args.is_vlm and draft_model_config.target_model_type == "qwen2_5_vl":
-            from transformers import Qwen2_5_VLForConditionalGeneration
+        if args.is_vlm:
+            if draft_model_config.target_model_type == "qwen2_5_vl":
+                from transformers import Qwen2_5_VLForConditionalGeneration
 
-            target_model = (
-                Qwen2_5_VLForConditionalGeneration.from_pretrained(
-                    pretrained_model_name_or_path=args.target_model_path,
-                    torch_dtype=torch.bfloat16,
+                target_model = (
+                    Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                        pretrained_model_name_or_path=args.target_model_path,
+                        torch_dtype=torch.bfloat16,
+                    )
+                    .eval()
+                    .cuda()
                 )
-                .eval()
-                .cuda()
-            )
+            else:
+                
+                target_model = (
+                    Qwen3VLForConditionalGeneration.from_pretrained(
+                        pretrained_model_name_or_path=args.target_model_path,
+                        torch_dtype=torch.bfloat16,
+                    )
+                    .eval()
+                    .cuda()
+                )
         else:
             target_model = (
                 AutoModelForCausalLM.from_pretrained(
@@ -318,6 +333,17 @@ def main():
             min_pixels=args.min_pixels,
             max_pixels=args.max_pixels,
         )
+        if "qwen3" in draft_model_config.target_model_type:
+            aprocessor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-3B-Instruct")
+            processor = AutoImageProcessor.from_pretrained(
+                args.target_model_path,
+            )
+            processor = Qwen3VLProcessor(
+                image_processor=processor,
+                tokenizer=tokenizer,
+                video_processor=None,
+                chat_template=aprocessor.chat_template,
+            )
     else:
         processor = None
 
@@ -353,7 +379,7 @@ def main():
     train_dataloader = prepare_dp_dataloaders(
         train_eagle3_dataset,
         args.draft_micro_batch_size,
-        num_workers=4,
+        num_workers=args.build_dataset_num_proc,
         shuffle=True,
         process_group=get_dp_group(),
         is_vlm=args.is_vlm,
@@ -400,7 +426,7 @@ def main():
 
     # build Eagle3 model
     # broadcast draft model
-    if args.is_vlm and draft_model_config.target_model_type == "qwen2_5_vl":
+    if args.is_vlm:
         eagle3_model = QwenVLOnlineEagle3Model(
             target_model=target_model,
             draft_model=draft_model,
@@ -509,8 +535,8 @@ def main():
                     input_ids=data["input_ids"].cuda(),
                     attention_mask=data["attention_mask"].cuda(),
                     loss_mask=data["loss_mask"].cuda(),
-                    pixel_values=data["pixel_values"].cuda(),
-                    image_grid_thw=data["image_grid_thw"].cuda(),
+                    pixel_values=data["pixel_values"].cuda() if data["pixel_values"] is not None else None,
+                    image_grid_thw=data["image_grid_thw"].cuda() if data["image_grid_thw"] is not None else None,
                 )
             else:
                 plosses, _, acces = eagle3_model(

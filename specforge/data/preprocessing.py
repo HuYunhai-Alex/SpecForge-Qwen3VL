@@ -333,7 +333,7 @@ def build_eagle3_dataset(
 
     def preprocess_function(examples):
         # Handle different dataset formats
-        if is_vlm:
+        if is_vlm and "image" in examples:
             processed = preprocess_vlm_conversations(
                 processor,
                 examples,
