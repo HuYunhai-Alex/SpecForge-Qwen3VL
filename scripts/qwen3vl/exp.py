@@ -4,7 +4,7 @@ from transformers import AutoImageProcessor, AutoTokenizer
 
 import os
 curr_path = os.path.dirname(os.path.abspath(__file__))
-os.environ["HF_TOKEN"] = "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"
+os.environ["HF_TOKEN"] = "xxxx"
 model = Qwen3VLForConditionalGeneration.from_pretrained(
     "nexa4ai/qwen3vl-4B", torch_dtype="auto", device_map="auto"
 )
