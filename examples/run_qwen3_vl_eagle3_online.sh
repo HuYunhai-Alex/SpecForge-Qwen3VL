@@ -10,10 +10,10 @@ torchrun \
     --standalone \
     --nproc_per_node $NUM_GPUS \
     $ROOT_DIR/scripts/train_eagle3_online.py \
-    --target-model-path /scratch/yh5961/RLSD/SpecForge/qwen3-vl \
-    --draft-model-config $ROOT_DIR/configs/qwen3-vl-8b-eagle3.json \
-    --train-data-path $ROOT_DIR/cache/dataset/sharegpt_train.jsonl \
-    --output-dir $ROOT_DIR/outputs/Qwen3-VL-8B-eagle3-text \
+    --target-model-path $ROOT_DIR/secrete-model-vl \
+    --draft-model-config $ROOT_DIR/configs/qwen3-vl-4b-eagle3.json \
+    --train-data-path $ROOT_DIR/ShareGPT4V/sharegpt4v_train.jsonl \
+    --output-dir $ROOT_DIR/outputs/Qwen3-VL-4B-eagle3-text \
     --num-epochs 2 \
     --batch-size 64 \
     --learning-rate 1e-4 \

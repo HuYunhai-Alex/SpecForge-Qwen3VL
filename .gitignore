@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+secrete*
 
 # C extensions
 *.so
